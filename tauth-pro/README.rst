@@ -2,11 +2,15 @@
 Third-party Django Authentication
 =================================
 
-Custom Django BaseBackend to authenticate users on a third-party authentication service using login
+This reusable app provides the following main features:
+
+- An abstract Django BaseBackend class for authenticating users on a third-party auth service using login
 credentials (username and password).
 
-Custom Django Rest Framework BaseAuthentication to identify coming API requests using the
-same third-party auth service supporting token-based authentication.
+- An abstract Django Rest Framework BaseAuthentication class for authenticating token-based API requests
+on the third-party auth service.
+
+- This app implements a complete example using Keycloak (an open source identity and access management solution).
 
 Quick start
 -----------
@@ -25,7 +29,7 @@ Quick start
 
     def logout(self, user_id):
 
-2. Instantiate your third-party authenticator for example in your apps settings like this ::
+2. Instantiate your third-party authenticator - for example in your apps settings - like this ::
 
     authenticator: Authenticator
 
@@ -35,7 +39,7 @@ Quick start
         kc.connect()
         self.authenticator = kc
 
-3. Define your custom app backend and passing it to your Django project settings like this::
+3. Define your custom app backend and passing it to your Django project settings as follows::
 
     -- file: myDjangoApp/backends.py
     class CustomAuthBackend(TBaseBackend):
@@ -49,7 +53,7 @@ Quick start
     AUTHENTICATION_BACKENDS = ('myDjangoApp.backends.CustomAuthBackend',)
 
 
-4. To authenticate an existing user on the third-party service, and then log it in your myDjangoApp,
+4. To authenticate an existing user on the third-party service, and log it in your myDjangoApp,
 call the following statements::
 
     def login(self, request):
@@ -61,7 +65,7 @@ call the following statements::
 
         login(request, user)
 
-5. To authenticate coming requests (signed with a Token Bearer) on the third-party auth service, define your custom
+5. To authenticate API requests (signed with a Token Bearer) on the third-party auth service, define your custom
 authentication scheme for your DFR views as follows::
 
     class ViewsTokenAuth(TTokenBaseAuthentication):

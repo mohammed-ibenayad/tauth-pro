@@ -4,11 +4,9 @@ Third-party Django Authentication
 
 This reusable app provides the following main features:
 
-- An abstract Django BaseBackend class for authenticating users on a third-party auth service using login
-credentials (username and password).
+- An abstract Django BaseBackend class for authenticating users on a third-party auth service using login credentials (username and password).
 
-- An abstract Django Rest Framework BaseAuthentication class for authenticating token-based API requests
-on the third-party auth service.
+- An abstract Django Rest Framework BaseAuthentication class for authenticating token-based API requests on the third-party auth service.
 
 - This app implements a complete example using Keycloak (an open source identity and access management solution).
 
@@ -53,8 +51,7 @@ Quick start
     AUTHENTICATION_BACKENDS = ('myDjangoApp.backends.CustomAuthBackend',)
 
 
-4. To authenticate an existing user on the third-party service, and log it in your myDjangoApp,
-call the following statements::
+4. To authenticate an existing user on the third-party service, and log it in your myDjangoApp, call the following statements::
 
     def login(self, request):
         user = authenticate(request, username=username, password=password)
@@ -65,15 +62,13 @@ call the following statements::
 
         login(request, user)
 
-5. To authenticate API requests (signed with a Token Bearer) on the third-party auth service, define your custom
-authentication scheme for your DFR views as follows::
+5. To authenticate API requests (signed with a Token Bearer) on the third-party auth service, define your custom authentication scheme for your DFR views as follows::
 
     class ViewsTokenAuth(TTokenBaseAuthentication):
 
         def get_authenticator(self):
-            config = apps.get_app_config('DAA')
+            config = apps.get_app_config('myDjangoApp')
             return config.authenticator
 
     class myDjangoAppView(generics.GenericAPIView):
         authentication_classes = [ViewsTokenAuth]
-

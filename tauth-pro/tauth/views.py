@@ -30,26 +30,26 @@ class UserLoginView(generics.GenericAPIView):
         password = request.data.get('password', None)
 
         user = authenticate(request, username=username, password=password)
-        if user:
-            token_data = self.get_authenticator().validate_credentials(username=username, password=password)
-            access_token = token_data.get('access_token', None)
-            refresh_token = token_data.get('refresh_token', None)
 
-        if user is None or access_token is None:
+        if user is None:
             msg = _('Invalid User Credentials.')
             raise exceptions.AuthenticationFailed(msg)
 
         login(request, user)
+
+        if hasattr(user, 'extra_transients'):
+            access_token = user.extra_transients.get('access_token', None)
+            refresh_token = user.extra_transients.get('refresh_token', None)
 
         return {'access_token': access_token, 'refresh_token': refresh_token}
 
     # @sensitive_post_parameters('password'))
     def post(self, request, *args, **kwargs):
         self.before_login(request)
-        tokens = self.login(request)
+        login_info = self.login(request)
         self.after_login(request)
-        access_token = tokens.get('access_token', None)
-        refresh_token = tokens.get('refresh_token', None)
+        access_token = login_info.get('access_token', None)
+        refresh_token = login_info.get('refresh_token', None)
         return Response({'access_token': access_token, 'refresh_token': refresh_token}, status=status.HTTP_200_OK)
 
 

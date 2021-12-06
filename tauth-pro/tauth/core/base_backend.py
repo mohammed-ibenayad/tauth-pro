@@ -1,9 +1,9 @@
 from abc import abstractmethod
 
-from django.contrib.auth.backends import BaseBackend
 from django.contrib.auth import get_user_model
-from django.views.decorators.debug import sensitive_variables
+from django.contrib.auth.backends import BaseBackend
 from django.utils.crypto import get_random_string
+from django.views.decorators.debug import sensitive_variables
 
 from .abc_authenticator import Authenticator
 
@@ -19,16 +19,34 @@ class TBaseBackend(BaseBackend):
 
     keyword = 'Bearer'
 
+    @abstractmethod
+    def after_authentication(self, user: get_user_model(), access_token=None):
+        pass
+
+    def get_authenticator(self) -> Authenticator:
+        raise NotImplementedError("Subclasses should implement this!")
+
+    def get_user(self, user_id):
+
+        try:
+            user_model = get_user_model()
+            user = user_model.objects.get(pk=user_id)
+        except user_model.DoesNotExist:
+            return None
+
+        return user
+
     @sensitive_variables('password', 'access_token')
     def authenticate(self, request, **kwargs):
         """
         Overriding the parent method from BaseBackend. This method is responsible of returning
-        the Django authenticated user.  Any inheriting class has the possibility of defining
+        the Django authenticated user. Any inheriting class has the possibility of defining
         custom behavior after authentication completed through the 'after_authentication()' method.
         """
 
         is_authorized = False
         access_token = None
+        refresh_token = None
 
         username = kwargs.get('username', None)
         password = kwargs.get('password', None)
@@ -37,66 +55,70 @@ class TBaseBackend(BaseBackend):
 
         # TODO Deactivate Django user if not defined on the authenticator
 
-        if token_data:
+        if token_data is not None:
             is_authorized = token_data.get('is_authorized', False)
             access_token = token_data.get('access_token', None)
+            refresh_token = token_data.get('refresh_token', None)
 
         if not is_authorized:
             return None
 
-        # Logging using username.
-        auth_user = get_user_model()
-        try:
-            user = auth_user.objects.get(username=username)
-        except auth_user.DoesNotExist:
-            pass
-        else:
-            self.after_authentication(user, access_token)
-            return user
+        user = self._get_user_by_username(username=username)
+        if user is not None:
+            user = self._get_user_by_email(username=username)
 
-        # Logging using email if with username failed.
-        try:
-            user = auth_user.objects.get(email=username)
-        except auth_user.DoesNotExist:
+        if user is None:
+            user_info = self.get_user_info_by_token(access_token)
 
-            user_data = self.get_authenticator().validate_credentials(request_token=access_token)
-            username = user_data.get('username', None)
-            email = user_data.get('email', None)
-            kwargs = {'username': username, 'email': email}
+            # Create user replica using the Django User model.
+            user = self._create_user(**user_info)
+            user.extra_transients = {'access_token': access_token, 'refresh_token': refresh_token}
 
-            # Create user replica using Django User model.
-            user = self.create_user(**kwargs)
-
+        # Execute some custom behavior after authentication
+        # in the class inheriting from TBaseBackend.
         self.after_authentication(user, access_token)
+
         return user
 
-    def get_authenticator(self) -> Authenticator:
-        raise NotImplementedError("Subclasses should implement this!")
+    def get_user_info_by_token(self, access_token) -> dict:
 
-    @abstractmethod
-    def after_authentication(self, user: get_user_model(), access_token=None):
-        pass
+        user = self.get_authenticator().validate_credentials(request_token=access_token)
+        username = user.get('username', None)
+        email = user.get('email', None)
+        return {'username': username, 'email': email}
 
-    def create_user(self, **kwargs) -> get_user_model():
+    def _get_user_by_username(self, username):
+
+        user_model = get_user_model()
+        try:
+            user = user_model.objects.get(username=username)
+        except user_model.DoesNotExist:
+            return None
+        else:
+            return user
+
+    def _get_user_by_email(self, username):
+
+        user_model = get_user_model()
+        try:
+            user = user_model.objects.get(email=username)
+        except user_model.DoesNotExist:
+            return None
+        else:
+            return user
+
+    def _create_user(self, **kwargs) -> get_user_model():
         auth_user = get_user_model()
         username = kwargs.get('username', None)
+        if username is None:
+            raise ValueError('username doesn''t exist.')
         email = kwargs.get('email', None)
 
         user = auth_user(username=username)
-        user.is_staff = False
+        user.is_staff = True
         user.is_superuser = False
         user.email = email
         user.password = get_random_string()
         user.save()
-
-        return user
-
-    def get_user(self, user_id):
-
-        try:
-            auth_user = get_user_model()
-            user = auth_user.objects.get(pk=user_id)
-        except auth_user.DoesNotExist:
-            return None
 
         return user

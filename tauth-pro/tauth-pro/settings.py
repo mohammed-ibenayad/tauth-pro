@@ -148,3 +148,8 @@ KEYCLOAK_CONFIG = {
     'KEYCLOAK_REALM_ADMIN_USR': env("KEYCLOAK_REALM_ADMIN_USR"),
     'KEYCLOAK_REALM_ADMIN_PWD': env("KEYCLOAK_REALM_ADMIN_PWD"),
 }
+
+AUTHENTICATION_BACKENDS = (
+    'tauth.core.base_backend.TBaseBackend',
+    'django.contrib.auth.backends.ModelBackend',
+)

@@ -1,11 +1,9 @@
 from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.debug import sensitive_variables
-
-from rest_framework import exceptions
-
 from keycloak import KeycloakOpenID, KeycloakAdmin
 from keycloak.exceptions import KeycloakError
+from rest_framework import exceptions
 
 from ..core.abc_authenticator import Authenticator
 
@@ -47,7 +45,7 @@ class KeycloakAuthenticator(Authenticator):
 
             auth_data['access_token'] = res.get('access_token', None)
             auth_data['refresh_token'] = res.get('refresh_token', None)
-            auth_data['global_id'] = res.get('sub', None)
+            auth_data['sub'] = res.get('sub', None)
             auth_data['username'] = res.get('preferred_username', None)
             auth_data['email'] = res.get('email', None)
             auth_data['expires_in'] = res.get('expires_in', None)
@@ -162,10 +160,10 @@ class KeycloakAuthenticator(Authenticator):
         except KeycloakError as kce:
             raise exceptions.AuthenticationFailed(kce.error_message)
 
-    def logout(self, user_id):
+    def logout(self, token):
         try:
 
-            self.get_authenticator().logout(refresh_token=user_id)
+            self.get_authenticator().logout(refresh_token=token)
 
         except KeycloakError as kce:
             raise exceptions.NotFound(kce.error_message)

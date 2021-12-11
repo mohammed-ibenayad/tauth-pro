@@ -1,98 +1,121 @@
 from abc import abstractmethod
+
+from django.contrib.auth import authenticate, login as django_login
+from django.contrib.auth import logout as django_logout
 from django.utils.translation import gettext_lazy as _
-from django.contrib.auth import authenticate, login
-from django.contrib.auth import logout
-
-from .core.abc_authenticator import Authenticator
-
+from rest_framework import exceptions
 from rest_framework import status, generics
 from rest_framework.response import Response
-from rest_framework import exceptions
+
+from . import serializers
+from .core.abc_authenticator import Authenticator
 
 
 class UserLoginView(generics.GenericAPIView):
 
+    serializer_class = serializers.LoginViewSerializer
+
     def get_authenticator(self) -> Authenticator:
         raise NotImplementedError("Subclasses should implement this!")
 
     @abstractmethod
-    def before_login(self, request):
+    def before_login(self, request, *args, **kwargs):
         pass
 
     @abstractmethod
-    def after_login(self, request):
+    def after_login(self, request, *args, **kwargs):
         pass
 
-    def login(self, request) -> dict:
-        access_token = None
-        refresh_token = None
-        username = request.data.get('username', None)
-        password = request.data.get('password', None)
+    def _perform_login(self, request, *args, **kwargs):
+
+        token = {}
+        username = kwargs.get('username', None)
+        password = kwargs.get('password', None)
 
         user = authenticate(request, username=username, password=password)
-        if user:
-            token_data = self.get_authenticator().validate_credentials(username=username, password=password)
-            access_token = token_data.get('access_token', None)
-            refresh_token = token_data.get('refresh_token', None)
 
-        if user is None or access_token is None:
+        if user is None:
             msg = _('Invalid User Credentials.')
             raise exceptions.AuthenticationFailed(msg)
 
-        login(request, user)
+        if hasattr(user, 'extra_transients'):
+            token['access_token'] = user.extra_transients.get('access_token', None)
+            token['refresh_token'] = user.extra_transients.get('refresh_token', None)
 
-        return {'access_token': access_token, 'refresh_token': refresh_token}
+        if token:
+            django_login(request, user)
 
-    # @sensitive_post_parameters('password'))
+        return token
+
     def post(self, request, *args, **kwargs):
-        self.before_login(request)
-        tokens = self.login(request)
-        self.after_login(request)
-        access_token = tokens.get('access_token', None)
-        refresh_token = tokens.get('refresh_token', None)
-        return Response({'access_token': access_token, 'refresh_token': refresh_token}, status=status.HTTP_200_OK)
+
+        serializer = self.get_serializer(data=request.data,
+                                         context={'request': request})
+
+        serializer.is_valid(raise_exception=True)
+
+        self.before_login(request, *args, **kwargs)
+        token = self._perform_login(request, **serializer.validated_data)
+        self.after_login(request, *args, **kwargs)
+
+        return Response(token, status=status.HTTP_200_OK)
 
 
 class UserLogoutView(generics.GenericAPIView):
 
+    serializer_class = serializers.LogoutViewSerializer
+
     def get_authenticator(self) -> Authenticator:
         raise NotImplementedError("Subclasses should implement this!")
 
     @abstractmethod
-    def before_logout(self, request):
+    def before_logout(self, request, *args, **kwargs):
         pass
 
     @abstractmethod
-    def after_logout(self, request):
+    def after_logout(self, request, *args, **kwargs):
         pass
 
-    def logout(self, request):
+    def _perform_logout(self, request, *args, **kwargs):
+        logout_token = request.data.get('logout_token', None)
+        self.get_authenticator().logout(token=logout_token)
 
-        refresh_token = request.data.get('refresh_token', None)
-        self.get_authenticator().logout(user_id=refresh_token)
-        logout(request)
+        django_logout(request)
 
     def post(self, request, *args, **kwargs):
-        self.before_logout(request)
-        self.logout(request)
-        self.after_logout(request)
-        return Response(status=status.HTTP_200_OK)
+
+        serializer = self.get_serializer(data=request.data,
+                                         context={'request': request})
+
+        serializer.is_valid(raise_exception=True)
+
+        self.before_logout(request, *args, **kwargs)
+        self._perform_logout(request, **serializer.validated_data)
+        self.after_logout(request, *args, **kwargs)
+
+        msg = _("Logout successful")
+
+        return Response(data=msg, status=status.HTTP_200_OK)
 
 
 class UserRefreshTokenView(generics.GenericAPIView):
 
+    serializer_class = serializers.RefreshTokenViewSerializer
+
     def get_authenticator(self) -> Authenticator:
         raise NotImplementedError("Subclasses should implement this!")
 
-    def refresh_token(self, request) -> dict:
-        refresh_token = request.data.get('refresh_token', None)
-        token_data = self.get_authenticator().validate_credentials(refresh_token=refresh_token)
-        access_token = token_data.get('access_token', None)
-        new_refresh_token = token_data.get('refresh_token', None)
-        return {'access_token': access_token, 'new_refresh_token': new_refresh_token}
+    def _refresh_token(self, request, *args, **kwargs) -> dict:
+        refresh_token = kwargs.get('refresh_token', None)
+        return self.get_authenticator().validate_credentials(refresh_token=refresh_token)
 
     def post(self, request, *args, **kwargs):
-        tokens = self.refresh_token(request)
-        access_token = tokens.get('access_token', None)
-        new_refresh_token = tokens.get('new_refresh_token', None)
-        return Response({'access_token': access_token, 'refresh_token': new_refresh_token}, status=status.HTTP_200_OK)
+
+        serializer = self.get_serializer(data=request.data,
+                                         context={'request': request})
+
+        serializer.is_valid(raise_exception=True)
+
+        token = self._refresh_token(request, **serializer.validated_data)
+
+        return Response(data=token, status=status.HTTP_200_OK)

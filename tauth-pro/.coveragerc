@@ -1,0 +1,11 @@
+[run]
+omit =
+    ./tauth-pro/*
+    */migrations/*
+    */templates/*
+    *load_users.py*
+    *apps.py*
+    *models.py*
+    *test.py*
+    *manage.py*
+    *setup.py*

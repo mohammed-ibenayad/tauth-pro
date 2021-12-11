@@ -27,6 +27,6 @@ class Authenticator(ABC):
         pass
 
     @abstractmethod
-    def logout(self, user_id):
+    def logout(self, token):
         pass
 

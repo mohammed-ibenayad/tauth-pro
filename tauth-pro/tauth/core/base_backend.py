@@ -64,7 +64,7 @@ class TBaseBackend(BaseBackend):
             return None
 
         user = self._get_user_by_username(username=username)
-        if user is not None:
+        if user is None:
             user = self._get_user_by_email(username=username)
 
         if user is None:
@@ -72,7 +72,8 @@ class TBaseBackend(BaseBackend):
 
             # Create user replica using the Django User model.
             user = self._create_user(**user_info)
-            user.extra_transients = {'access_token': access_token, 'refresh_token': refresh_token}
+
+        user.extra_transients = {'access_token': access_token, 'refresh_token': refresh_token}
 
         # Execute some custom behavior after authentication
         # in the class inheriting from TBaseBackend.
@@ -110,8 +111,6 @@ class TBaseBackend(BaseBackend):
     def _create_user(self, **kwargs) -> get_user_model():
         auth_user = get_user_model()
         username = kwargs.get('username', None)
-        if username is None:
-            raise ValueError('username doesn''t exist.')
         email = kwargs.get('email', None)
 
         user = auth_user(username=username)

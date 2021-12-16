@@ -15,6 +15,11 @@ class UserLoginView(generics.GenericAPIView):
 
     serializer_class = serializers.LoginViewSerializer
 
+    USERNAME_FIELD = 'username'
+    PASSWORD_FIELD = 'password'
+    ACCESS_TOKEN_FIELD = 'access_token'
+    REFRESH_TOKEN_FIELD = 'refresh_token'
+
     def get_authenticator(self) -> Authenticator:
         raise NotImplementedError("Subclasses should implement this!")
 
@@ -29,8 +34,8 @@ class UserLoginView(generics.GenericAPIView):
     def _perform_login(self, request, *args, **kwargs):
 
         token = {}
-        username = kwargs.get('username', None)
-        password = kwargs.get('password', None)
+        username = kwargs.get(self.USERNAME_FIELD, None)
+        password = kwargs.get(self.PASSWORD_FIELD, None)
 
         user = authenticate(request, username=username, password=password)
 
@@ -39,8 +44,8 @@ class UserLoginView(generics.GenericAPIView):
             raise exceptions.AuthenticationFailed(msg)
 
         if hasattr(user, 'extra_transients'):
-            token['access_token'] = user.extra_transients.get('access_token', None)
-            token['refresh_token'] = user.extra_transients.get('refresh_token', None)
+            token['access_token'] = user.extra_transients.get(self.ACCESS_TOKEN_FIELD, None)
+            token['refresh_token'] = user.extra_transients.get(self.REFRESH_TOKEN_FIELD, None)
 
         if token:
             django_login(request, user)
@@ -65,6 +70,8 @@ class UserLogoutView(generics.GenericAPIView):
 
     serializer_class = serializers.LogoutViewSerializer
 
+    LOGOUT_TOKEN_FIELD = 'logout_token'
+
     def get_authenticator(self) -> Authenticator:
         raise NotImplementedError("Subclasses should implement this!")
 
@@ -77,7 +84,12 @@ class UserLogoutView(generics.GenericAPIView):
         pass
 
     def _perform_logout(self, request, *args, **kwargs):
-        logout_token = request.data.get('logout_token', None)
+        serializer = self.get_serializer(data=request.data,
+                                         context={'request': request})
+
+        serializer.is_valid(raise_exception=True)
+
+        logout_token = request.data.get(self.LOGOUT_TOKEN_FIELD, None)
         self.get_authenticator().logout(token=logout_token)
 
         django_logout(request)
@@ -102,11 +114,13 @@ class UserRefreshTokenView(generics.GenericAPIView):
 
     serializer_class = serializers.RefreshTokenViewSerializer
 
+    REFRESH_TOKEN_FIELD = 'refresh_token'
+
     def get_authenticator(self) -> Authenticator:
         raise NotImplementedError("Subclasses should implement this!")
 
     def _refresh_token(self, request, *args, **kwargs) -> dict:
-        refresh_token = kwargs.get('refresh_token', None)
+        refresh_token = kwargs.get(self.REFRESH_TOKEN_FIELD, None)
         return self.get_authenticator().validate_credentials(refresh_token=refresh_token)
 
     def post(self, request, *args, **kwargs):

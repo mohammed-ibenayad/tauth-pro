@@ -116,13 +116,13 @@ class KeycloakAuthenticator(Authenticator):
             payload = {"email": email,
                        "username": username,
                        "enabled": 'true',
-                       "credentials": [
-                           {
-                               "type": "password",
-                               "temporary": 'true',
-                               "value": ""
-                           }
-                       ]
+                       # "credentials": [
+                       #     {
+                       #         "type": "password",
+                       #         "temporary": 'true',
+                       #         "value": ""
+                       #     }
+                       # ]
                        }
 
             return self._adm_authenticator.create_user(payload=payload, exist_ok=False)

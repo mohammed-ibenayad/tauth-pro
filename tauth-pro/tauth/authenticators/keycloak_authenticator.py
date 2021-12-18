@@ -34,11 +34,11 @@ class KeycloakAuthenticator(Authenticator):
             refresh_token = credentials.get('refresh_token', None)
 
             if username and password:
-                res = self.get_authenticator().token(username=username, password=password)
+                res = self._authenticator.token(username=username, password=password)
             elif request_token:
-                res = self.get_authenticator().userinfo(token=request_token)
+                res = self._authenticator.userinfo(token=request_token)
             elif refresh_token:
-                res = self.get_authenticator().refresh_token(refresh_token=refresh_token)
+                res = self._authenticator.refresh_token(refresh_token=refresh_token)
             else:
                 msg = _('Missing authentication credentials.')
                 raise exceptions.AuthenticationFailed(msg)
@@ -116,16 +116,16 @@ class KeycloakAuthenticator(Authenticator):
             payload = {"email": email,
                        "username": username,
                        "enabled": 'true',
-                       "credentials": [
-                           {
-                               "type": "password",
-                               "temporary": 'true',
-                               "value": ""
-                           }
-                       ]
+                       # "credentials": [
+                       #     {
+                       #         "type": "password",
+                       #         "temporary": 'true',
+                       #         "value": ""
+                       #     }
+                       # ]
                        }
 
-            return self.get_adm_authenticator().create_user(payload=payload, exist_ok=False)
+            return self._adm_authenticator.create_user(payload=payload, exist_ok=False)
 
         except KeycloakError as kce:
             raise exceptions.AuthenticationFailed(kce.error_message)
@@ -144,7 +144,7 @@ class KeycloakAuthenticator(Authenticator):
             if self.get_adm_authenticator() is None:
                 self.connect_adm()
 
-            return self.get_adm_authenticator().update_user(user_id=user_id, payload=payload)
+            return self._adm_authenticator.update_user(user_id=user_id, payload=payload)
 
         except KeycloakError as kce:
             raise exceptions.AuthenticationFailed(kce.error_message)
@@ -155,7 +155,7 @@ class KeycloakAuthenticator(Authenticator):
             if self.get_adm_authenticator() is None:
                 self.connect_adm()
 
-            return self.get_adm_authenticator().delete_user(user_id=user_id)
+            return self._adm_authenticator.delete_user(user_id=user_id)
 
         except KeycloakError as kce:
             raise exceptions.AuthenticationFailed(kce.error_message)
@@ -163,7 +163,7 @@ class KeycloakAuthenticator(Authenticator):
     def logout(self, token):
         try:
 
-            self.get_authenticator().logout(refresh_token=token)
+            self._authenticator.logout(refresh_token=token)
 
         except KeycloakError as kce:
             raise exceptions.NotFound(kce.error_message)

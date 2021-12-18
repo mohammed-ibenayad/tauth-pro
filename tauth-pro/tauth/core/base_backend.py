@@ -67,11 +67,15 @@ class TBaseBackend(BaseBackend):
         if user is None:
             user = self._get_user_by_email(username=username)
 
+        auth_user = self.get_user_info_by_token(access_token)
+
         if user is None:
-            user_info = self.get_user_info_by_token(access_token)
 
             # Create user replica using the Django User model.
-            user = self._create_user(**user_info)
+            user = self._create_user(**auth_user)
+        else:
+            # Update the user replica based on the authenticator data.
+            self._update_user(user, **auth_user)
 
         user.extra_transients = {'access_token': access_token, 'refresh_token': refresh_token}
 
@@ -117,7 +121,16 @@ class TBaseBackend(BaseBackend):
         user.is_staff = True
         user.is_superuser = False
         user.email = email
-        user.password = get_random_string()
+        user.password = get_random_string(length=256)
         user.save()
 
         return user
+
+    def _update_user(self, user: get_user_model(), **kwargs):
+        email = kwargs.get('email', None)
+        if email is not None:
+            user.email = email
+
+        user.save()
+
+

@@ -121,7 +121,7 @@ class TBaseBackend(BaseBackend):
         user.is_staff = True
         user.is_superuser = False
         user.email = email
-        user.password = get_random_string()
+        user.password = get_random_string(length=256)
         user.save()
 
         return user

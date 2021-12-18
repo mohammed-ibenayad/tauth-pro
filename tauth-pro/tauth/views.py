@@ -11,7 +11,13 @@ from . import serializers
 from .core.abc_authenticator import Authenticator
 
 
-class UserLoginView(generics.GenericAPIView):
+class UserAuthViewsMixin:
+
+    def get_authenticator(self) -> Authenticator:
+        raise NotImplementedError("Subclasses should implement this!")
+
+
+class UserLoginView(UserAuthViewsMixin, generics.GenericAPIView):
 
     serializer_class = serializers.LoginViewSerializer
 
@@ -19,9 +25,6 @@ class UserLoginView(generics.GenericAPIView):
     PASSWORD_FIELD = 'password'
     ACCESS_TOKEN_FIELD = 'access_token'
     REFRESH_TOKEN_FIELD = 'refresh_token'
-
-    def get_authenticator(self) -> Authenticator:
-        raise NotImplementedError("Subclasses should implement this!")
 
     @abstractmethod
     def before_login(self, request, *args, **kwargs):
@@ -66,14 +69,11 @@ class UserLoginView(generics.GenericAPIView):
         return Response(token, status=status.HTTP_200_OK)
 
 
-class UserLogoutView(generics.GenericAPIView):
+class UserLogoutView(UserAuthViewsMixin, generics.GenericAPIView):
 
     serializer_class = serializers.LogoutViewSerializer
 
     LOGOUT_TOKEN_FIELD = 'logout_token'
-
-    def get_authenticator(self) -> Authenticator:
-        raise NotImplementedError("Subclasses should implement this!")
 
     @abstractmethod
     def before_logout(self, request, *args, **kwargs):
@@ -110,14 +110,11 @@ class UserLogoutView(generics.GenericAPIView):
         return Response(data=msg, status=status.HTTP_200_OK)
 
 
-class UserRefreshTokenView(generics.GenericAPIView):
+class UserRefreshTokenView(UserAuthViewsMixin, generics.GenericAPIView):
 
     serializer_class = serializers.RefreshTokenViewSerializer
 
     REFRESH_TOKEN_FIELD = 'refresh_token'
-
-    def get_authenticator(self) -> Authenticator:
-        raise NotImplementedError("Subclasses should implement this!")
 
     def _refresh_token(self, request, *args, **kwargs) -> dict:
         refresh_token = kwargs.get(self.REFRESH_TOKEN_FIELD, None)

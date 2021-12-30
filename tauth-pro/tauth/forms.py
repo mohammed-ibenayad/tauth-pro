@@ -22,17 +22,14 @@ class TAuthPasswordSetForm(auth_forms.SetPasswordForm):
         user = super().save(commit=True)
         password = self.cleaned_data["new_password1"]
 
-        self._update_user_password_on_authenticator(self.get_sub(), password)
+        user_id = self.get_sub()
+
+        self._update_user_password_on_authenticator(user_id=user_id, password=password)
 
         return user
 
     def _update_user_password_on_authenticator(self, user_id, password):
-
-        try:
-            self.get_authenticator().update_user(user_id=user_id, password=password)
-        except Exception as ex:
-            print(ex)
-            raise ex
+        self.get_authenticator().update_user(user_id=user_id, password=password)
 
 
 class TAuthPasswordChangeForm(TAuthPasswordSetForm, auth_forms.PasswordChangeForm):

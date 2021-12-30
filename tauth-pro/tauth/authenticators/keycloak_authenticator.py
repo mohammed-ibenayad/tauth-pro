@@ -26,8 +26,10 @@ class KeycloakAuthenticator(Authenticator):
         Or user is inactive in Keycloak Database
         """
 
-        auth_data = {}
+        res = {}
+
         try:
+
             username = credentials.get('username', None)
             password = credentials.get('password', None)
             request_token = credentials.get('request_token', None)
@@ -43,16 +45,9 @@ class KeycloakAuthenticator(Authenticator):
                 msg = _('Missing authentication credentials.')
                 raise exceptions.AuthenticationFailed(msg)
 
-            auth_data['access_token'] = res.get('access_token', None)
-            auth_data['refresh_token'] = res.get('refresh_token', None)
-            auth_data['sub'] = res.get('sub', None)
-            auth_data['username'] = res.get('preferred_username', None)
-            auth_data['email'] = res.get('email', None)
-            auth_data['expires_in'] = res.get('expires_in', None)
-            auth_data['refresh_expires_in'] = res.get('refresh_expires_in', None)
-            auth_data['is_authorized'] = True
+            res['is_authorized'] = True
 
-            return auth_data
+            return res
 
         except KeycloakError as kce:
             raise exceptions.AuthenticationFailed(kce.error_message)

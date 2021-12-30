@@ -23,8 +23,6 @@ class UserLoginView(UserAuthViewsMixin, generics.GenericAPIView):
 
     USERNAME_FIELD = 'username'
     PASSWORD_FIELD = 'password'
-    ACCESS_TOKEN_FIELD = 'access_token'
-    REFRESH_TOKEN_FIELD = 'refresh_token'
 
     @abstractmethod
     def before_login(self, request, *args, **kwargs):
@@ -36,7 +34,6 @@ class UserLoginView(UserAuthViewsMixin, generics.GenericAPIView):
 
     def _perform_login(self, request, *args, **kwargs):
 
-        token = {}
         username = kwargs.get(self.USERNAME_FIELD, None)
         password = kwargs.get(self.PASSWORD_FIELD, None)
 
@@ -46,14 +43,11 @@ class UserLoginView(UserAuthViewsMixin, generics.GenericAPIView):
             msg = _('Invalid User Credentials.')
             raise exceptions.AuthenticationFailed(msg)
 
-        if hasattr(user, 'extra_transients'):
-            token['access_token'] = user.extra_transients.get(self.ACCESS_TOKEN_FIELD, None)
-            token['refresh_token'] = user.extra_transients.get(self.REFRESH_TOKEN_FIELD, None)
-
-        if token:
+        if hasattr(user, 'auth_info'):
             django_login(request, user)
-
-        return token
+            return user.auth_info
+        else:
+            return {}
 
     def post(self, request, *args, **kwargs):
 
@@ -63,10 +57,10 @@ class UserLoginView(UserAuthViewsMixin, generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
 
         self.before_login(request, *args, **kwargs)
-        token = self._perform_login(request, **serializer.validated_data)
+        auth_info = self._perform_login(request, **serializer.validated_data)
         self.after_login(request, *args, **kwargs)
 
-        return Response(token, status=status.HTTP_200_OK)
+        return Response(auth_info, status=status.HTTP_200_OK)
 
 
 class UserLogoutView(UserAuthViewsMixin, generics.GenericAPIView):

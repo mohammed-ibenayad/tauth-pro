@@ -51,14 +51,11 @@ class TBaseBackend(BaseBackend):
         username = kwargs.get('username', None)
         password = kwargs.get('password', None)
 
-        token_data = self.get_authenticator().validate_credentials(username=username, password=password)
+        auth_info = self.get_authenticator().validate_credentials(username=username, password=password)
 
         # TODO Deactivate Django user if not defined on the authenticator
 
-        if token_data is not None:
-            is_authorized = token_data.get('is_authorized', False)
-            access_token = token_data.get('access_token', None)
-            refresh_token = token_data.get('refresh_token', None)
+        is_authorized = auth_info.get('is_authorized', False)
 
         if not is_authorized:
             return None
@@ -67,6 +64,7 @@ class TBaseBackend(BaseBackend):
         if user is None:
             user = self._get_user_by_email(username=username)
 
+        access_token = auth_info.get('access_token', None)
         auth_user = self.get_user_info_by_token(access_token)
 
         if user is None:
@@ -77,7 +75,7 @@ class TBaseBackend(BaseBackend):
             # Update the user replica based on the authenticator data.
             self._update_user(user, **auth_user)
 
-        user.extra_transients = {'access_token': access_token, 'refresh_token': refresh_token}
+        user.auth_info = auth_info
 
         # Execute some custom behavior after authentication
         # in the class inheriting from TBaseBackend.
@@ -132,5 +130,3 @@ class TBaseBackend(BaseBackend):
             user.email = email
 
         user.save()
-
-

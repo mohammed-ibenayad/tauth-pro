@@ -122,12 +122,12 @@ class TestLoginApi(APITestCase):
         try:
             raised = False
             user = get_user_model().objects.get(username='mayad')
+            self.assertEqual(user.username, 'mayad')
+            self.assertEqual(user.email, 'mayad@example.com')
         except get_user_model().DoesNotExist:
             raised = True
 
         self.assertFalse(raised)
-        self.assertEqual(user.username, 'mayad')
-        self.assertEqual(user.email, 'mayad@example.com')
 
     def test_login_api_with_missing_token(self):
         """

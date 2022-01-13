@@ -122,12 +122,12 @@ class TestLoginApi(APITestCase):
         try:
             raised = False
             user = get_user_model().objects.get(username='mayad')
+            self.assertEqual(user.username, 'mayad')
+            self.assertEqual(user.email, 'mayad@example.com')
         except get_user_model().DoesNotExist:
             raised = True
 
         self.assertFalse(raised)
-        self.assertEqual(user.username, 'mayad')
-        self.assertEqual(user.email, 'mayad@example.com')
 
     def test_login_api_with_missing_token(self):
         """
@@ -215,7 +215,6 @@ class TestRefreshTokenApi(APITestCase):
     def setUp(self) -> None:
         self.access_token = 'eyJsInR5cCIgOiAiSlUIIiA6ICJhSkxmVExVTzl.eyJqdGkiOiJhCCJMTEyMTUsIm5iZiI6.TETCzMBTO7qLUKcUK'
         self.refresh_token = 'eyJsInR5cCIgOiAiSlUIIiA6ICJhSkxmVExVTzl.eyJqdGkiOiJhCCJMTEyMTUsIm5iZiI6.TETCzMBTO7qLUKcUK'
-
         self.mock_auth = patch('tauth.views.UserRefreshTokenView.get_authenticator')
         self.mock_auth_p = self.mock_auth.start()
         self.mock_auth_p.return_value = create_autospec(Authenticator)

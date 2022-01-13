@@ -22,14 +22,20 @@ class TTokenBaseAuthentication(BaseAuthentication):
         kc.connect()
         self._authenticator = kc
 
+    def authenticate_header(self, request):
+        return self.keyword
+
     def authenticate(self, request):
 
         token = self.verify_request_token(request)
-        user_data = self._authenticator.validate_credentials(request_token=token)
+        try:
+            user_info = self._authenticator.validate_credentials(request_token=token)
+        except Exception as ex:
+            pass
 
-        is_authorized = user_data.get('is_authorized', False)
-        access_token = user_data.get('access_token', None)
-        username = user_data.get('username', None)
+        is_authorized = user_info.get('is_authorized', False)
+        access_token = user_info.get('access_token', None)
+        username = user_info.get('preferred_username', None)
 
         if not is_authorized:
             msg = _('Invalid token.')

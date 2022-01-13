@@ -215,7 +215,6 @@ class TestRefreshTokenApi(APITestCase):
     def setUp(self) -> None:
         self.access_token = 'eyJsInR5cCIgOiAiSlUIIiA6ICJhSkxmVExVTzl.eyJqdGkiOiJhCCJMTEyMTUsIm5iZiI6.TETCzMBTO7qLUKcUK'
         self.refresh_token = 'eyJsInR5cCIgOiAiSlUIIiA6ICJhSkxmVExVTzl.eyJqdGkiOiJhCCJMTEyMTUsIm5iZiI6.TETCzMBTO7qLUKcUK'
-
         self.mock_auth = patch('tauth.views.UserRefreshTokenView.get_authenticator')
         self.mock_auth_p = self.mock_auth.start()
         self.mock_auth_p.return_value = create_autospec(Authenticator)

@@ -31,7 +31,8 @@ class TTokenBaseAuthentication(BaseAuthentication):
         try:
             user_info = self._authenticator.validate_credentials(request_token=token)
         except Exception as ex:
-            pass
+            msg = _('Invalid token ')
+            raise exceptions.AuthenticationFailed(msg)
 
         is_authorized = user_info.get('is_authorized', False)
         access_token = user_info.get('access_token', None)
